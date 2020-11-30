@@ -32,6 +32,14 @@ configuration:
       type: string
     deployment-config:
       type: string
+    region:
+      type: string
+    requires-compatibilities:
+      type: string
+    task-cpu:
+      type: integer
+    task-memory:
+      type: integer
   required:
     - cluster
     - service

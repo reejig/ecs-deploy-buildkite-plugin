@@ -42,8 +42,8 @@ execution_role=${BUILDKITE_PLUGIN_ECS_DEPLOY_EXECUTION_ROLE:-""}
 region=${BUILDKITE_PLUGIN_ECS_DEPLOY_REGION:-""}
 requires_compatibilities=${BUILDKITE_PLUGIN_ECS_DEPLOY_REQUIRES_COMPATIBILITIES:-""}
 network_mode=${BUILDKITE_PLUGIN_ECS_DEPLOY_NETWORK_MODE:-""}
-task_cpu=${BUILDKITE_PLUGIN_ECS_DEPLOY_CPU:-""}
-task_memory=${BUILDKITE_PLUGIN_ECS_DEPLOY_MEMORY:-""}
+task_cpu=${BUILDKITE_PLUGIN_ECS_DEPLOY_TASK_CPU:-""}
+task_memory=${BUILDKITE_PLUGIN_ECS_DEPLOY_TASK_MEMORY:-""}
 
 if [[ $region != "" ]]; then
   # shellcheck disable=SC2034 # Used by the aws cli
@@ -138,18 +138,19 @@ fi
 
 if [[ -n "${requires_compatibilities}" ]]; then
     register_command+=" --requires-compatibilities ${requires_compatibilities}"
+		if [[ "${requires_compatibilities}" == "FARGATE" ]]; then
+      if [[ -n "${task_cpu}" && -n "${task_memory}" ]]; then
+				register_command+=" --cpu ${task_cpu}"
+				register_command+=" --memory ${task_memory}"
+		  else
+				echo "+++ ^^^"
+				echo "+++ Require task_cpu and task_memory if requires_compatibilities=\"FARGATE\""
+      fi
+    fi
 fi
 
 if [[ -n "${network_mode}" ]]; then
     register_command+=" --network-mode ${network_mode}"
-fi
-
-if [[ -n "${task_cpu}" ]]; then
-    register_command+=" --cpu ${task_cpu}"
-fi
-
-if [[ -n "${task_memory}" ]]; then
-    register_command+=" --memory ${task_memory}"
 fi
 
 echo "--- :ecs: task register command: ${register_command}"
