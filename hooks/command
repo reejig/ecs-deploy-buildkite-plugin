@@ -142,9 +142,10 @@ if [[ -n "${requires_compatibilities}" ]]; then
       if [[ -n "${task_cpu}" && -n "${task_memory}" ]]; then
 				register_command+=" --cpu ${task_cpu}"
 				register_command+=" --memory ${task_memory}"
-		  else
+      else
 				echo "+++ ^^^"
 				echo "+++ Require task_cpu and task_memory if requires_compatibilities=\"FARGATE\""
+        exit 1
       fi
     fi
 fi
