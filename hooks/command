@@ -83,6 +83,12 @@ function create_service() {
       && network_configuration_argument=" --network-configuration ${network_configuration}" \
       || network_configuration_argument="" 
 
+    # always use --launch-type argument instead of use --capacity-provider-strategy
+    # otherwise "FARGATE" capacity-provider will be used
+    [[ "${requires_compatibilities}" == "FARGATE" ]] \
+      && launch_type_argument=" --launch-type FARGATE"
+      || launch_type_argument=" --launch-type EC2"
+
     if [[ $service_defined -eq 0 ]]; then
         echo "--- :ecs: Creating a Service $service_name in cluster $cluster_name"
         # shellcheck disable=SC2086
@@ -93,7 +99,8 @@ function create_service() {
         --desired-count "$desired_count" \
         --deployment-configuration "maximumPercent=${max_deploy_perc},minimumHealthyPercent=${min_deploy_perc}" \
         $target_group_arguments \
-        $network_configuration_argument
+        $network_configuration_argument \
+        $launch_type_argument
     fi
 }
 
