@@ -86,7 +86,7 @@ function create_service() {
     # always use --launch-type argument instead of use --capacity-provider-strategy
     # otherwise "FARGATE" capacity-provider will be used
     [[ "${requires_compatibilities}" == "FARGATE" ]] \
-      && launch_type_argument=" --launch-type FARGATE"
+      && launch_type_argument=" --launch-type FARGATE" \
       || launch_type_argument=" --launch-type EC2"
 
     if [[ $service_defined -eq 0 ]]; then
