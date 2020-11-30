@@ -78,6 +78,11 @@ function create_service() {
 
     # shellcheck disable=SC2016
     service_defined=$(aws ecs describe-services --cluster "$cluster_name" --service "$service_name" --query 'services[?status==`ACTIVE`].status' --output text |wc -l)
+    
+    [[ -n "${network_configuration}" ]] \
+      && network_configuration_argument=" --network-configuration ${network_configuration}" \
+      || network_configuration_argument="" 
+
     if [[ $service_defined -eq 0 ]]; then
         echo "--- :ecs: Creating a Service $service_name in cluster $cluster_name"
         # shellcheck disable=SC2086
@@ -87,7 +92,8 @@ function create_service() {
         --task-definition "$task_definition" \
         --desired-count "$desired_count" \
         --deployment-configuration "maximumPercent=${max_deploy_perc},minimumHealthyPercent=${min_deploy_perc}" \
-        $target_group_arguments
+        $target_group_arguments \
+        $network_configuration_argument
     fi
 }
 
@@ -146,7 +152,6 @@ if [[ -n "${requires_compatibilities}" ]]; then
       && "${network_mode}" == "awsvpc" && -n "${network_configuration}" ]]; then
       register_command+=" --cpu ${task_cpu}"
       register_command+=" --memory ${task_memory}"
-      register_command+=" --network-configuration ${network_configuration}"
     else
       echo "+++ ^^^"
       echo "+++ FARGATE launch type requires following configuration to be set: "
