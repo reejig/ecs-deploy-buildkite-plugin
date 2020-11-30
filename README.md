@@ -101,7 +101,8 @@ The region we deploy the ECS Service to.
 
 ### `requires-compatibilities` (optional)
 
-The launch type the task requires. If no value is specified, it will default to EC2. Valid values include EC2 and FARGATE.
+The task launch type that Amazon ECS should validate the task definition against. This ensures that the task definition parameters are compatible with the specified launch type. If no value is specified, it defaults to EC2 .
+Valid values include EC2 and FARGATE.
 
 Example: `"FARGATE"`
 
@@ -129,6 +130,12 @@ Example: `1024`, `"1GB"`, `"1 GB"`
 The Docker networking mode to use for the containers in the task. The valid values are `none`, `bridge`, `awsvpc`, and `host`. The default Docker network mode is `bridge`.
 
 Example: `"awsvpc"`
+
+### `network-configuration` (optional)
+
+The network configuration (The VPC subnets and security groups associated with a task) for the service. This parameter is required for task definitions that use the awsvpc network mode to receive their own elastic network interface, and it is not supported for other network modes.
+
+Example: `"awsvpcConfiguration={subnets=[string,string],securityGroups=[string,string],assignPublicIp=string}"`
 
 ## AWS Roles
 

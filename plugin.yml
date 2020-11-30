@@ -40,6 +40,9 @@ configuration:
       type: integer
     task-memory:
       type: integer
+    network-mode:
+      type: string
+    
   required:
     - cluster
     - service

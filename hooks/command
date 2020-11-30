@@ -44,6 +44,7 @@ requires_compatibilities=${BUILDKITE_PLUGIN_ECS_DEPLOY_REQUIRES_COMPATIBILITIES:
 network_mode=${BUILDKITE_PLUGIN_ECS_DEPLOY_NETWORK_MODE:-""}
 task_cpu=${BUILDKITE_PLUGIN_ECS_DEPLOY_TASK_CPU:-""}
 task_memory=${BUILDKITE_PLUGIN_ECS_DEPLOY_TASK_MEMORY:-""}
+network_configuration=${BUILDKITE_PLUGIN_ECS_DEPLOY_NETWORK_CONFIGURATION:-""}
 
 if [[ $region != "" ]]; then
   # shellcheck disable=SC2034 # Used by the aws cli
@@ -137,17 +138,22 @@ if [[ -n "${execution_role}" ]]; then
 fi
 
 if [[ -n "${requires_compatibilities}" ]]; then
-    register_command+=" --requires-compatibilities ${requires_compatibilities}"
-		if [[ "${requires_compatibilities}" == "FARGATE" ]]; then
-      if [[ -n "${task_cpu}" && -n "${task_memory}" ]]; then
-				register_command+=" --cpu ${task_cpu}"
-				register_command+=" --memory ${task_memory}"
-      else
-				echo "+++ ^^^"
-				echo "+++ Require task_cpu and task_memory if requires_compatibilities=\"FARGATE\""
-        exit 1
-      fi
+  register_command+=" --requires-compatibilities ${requires_compatibilities}"
+  if [[ "${requires_compatibilities}" == "FARGATE" ]]; then
+    # FARGATE configuration requires to have task_cpu and task_memory setup
+    # also network_mode == "awsvpc" and need to have network configuration for new service
+    if [[ -n "${task_cpu}" && -n "${task_memory}" \
+      && "${network_mode}" == "awsvpc" && -n "${network_configuration}" ]]; then
+      register_command+=" --cpu ${task_cpu}"
+      register_command+=" --memory ${task_memory}"
+      register_command+=" --network-configuration ${network_configuration}"
+    else
+      echo "+++ ^^^"
+      echo "+++ FARGATE launch type requires following configuration to be set: "
+      echo "+++ task_cpu, task_memory, network_mode=\"awsvpc\", network_configuration"
+      exit 1
     fi
+  fi
 fi
 
 if [[ -n "${network_mode}" ]]; then
@@ -209,7 +215,6 @@ deploy_exitcode=0
 aws ecs wait services-stable \
   --cluster "${cluster}" \
   --services "${service_name}" || deploy_exitcode=$?
-
 
 service_events=$(aws ecs describe-services \
   --cluster "${cluster}" \
