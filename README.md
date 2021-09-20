@@ -111,6 +111,14 @@ The Docker networking mode to use for the containers in the task. The valid valu
 
 Example: `"awsvpc"`
 
+### `fargate-memory` (optional)
+
+If using `requires-compatibilities=FARGATE`, set the memory to be used.
+
+### `fargate-cpu` (optional)
+
+If using `requires-compatibilities=FARGATE`, set the CPU to be used.
+
 ## AWS Roles
 
 At a minimum this plugin requires the following AWS permissions to be granted to the agent running this step:
