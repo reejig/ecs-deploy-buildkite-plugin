@@ -42,8 +42,9 @@ execution_role=${BUILDKITE_PLUGIN_ECS_DEPLOY_EXECUTION_ROLE:-""}
 region=${BUILDKITE_PLUGIN_ECS_DEPLOY_REGION:-""}
 requires_compatibilities=${BUILDKITE_PLUGIN_ECS_DEPLOY_REQUIRES_COMPATIBILITIES:-""}
 network_mode=${BUILDKITE_PLUGIN_ECS_DEPLOY_NETWORK_MODE:-""}
-task_cpu=${BUILDKITE_PLUGIN_ECS_DEPLOY_FARGATE_CPU:-""}
-task_memory=${BUILDKITE_PLUGIN_ECS_DEPLOY_FARGATE_MEMORY:-""}
+task_cpu=${BUILDKITE_PLUGIN_ECS_DEPLOY_TASK_CPU:-""}
+task_memory=${BUILDKITE_PLUGIN_ECS_DEPLOY_TASK_MEMORY:-""}
+network_configuration=${BUILDKITE_PLUGIN_ECS_DEPLOY_NETWORK_CONFIGURATION:-""}
 
 if [[ $region != "" ]]; then
   # shellcheck disable=SC2034 # Used by the aws cli
@@ -76,7 +77,24 @@ function create_service() {
     target_group_arguments=$(generate_target_group_arguments "$5" "$6" "$7")
 
     # shellcheck disable=SC2016
-    service_defined=$(aws ecs describe-services --cluster "$cluster_name" --service "$service_name" --query 'services[?status==`ACTIVE`].status' --output text | wc -l)
+    service_defined=$(aws ecs \
+      describe-services \
+      --cluster "$cluster_name" \
+      --service "$service_name" \
+      --query 'services[?status==`ACTIVE`].status' \
+      --output text \
+      | wc -l)
+
+    [[ -n "${network_configuration}" ]] \
+      && network_configuration_argument=" --network-configuration ${network_configuration}" \
+      || network_configuration_argument=""
+
+    # always use --launch-type argument instead of use --capacity-provider-strategy
+    # otherwise "FARGATE" capacity-provider will be used
+    [[ "${requires_compatibilities}" == "FARGATE" ]] \
+      && launch_type_argument=" --launch-type FARGATE" \
+      || launch_type_argument=" --launch-type EC2"
+
     if [[ $service_defined -eq 0 ]]; then
         echo "--- :ecs: Creating a Service $service_name in cluster $cluster_name"
         # shellcheck disable=SC2086
@@ -86,7 +104,9 @@ function create_service() {
         --task-definition "$task_definition" \
         --desired-count "$desired_count" \
         --deployment-configuration "maximumPercent=${max_deploy_perc},minimumHealthyPercent=${min_deploy_perc}" \
-        $target_group_arguments | jq '.'
+        $target_group_arguments \
+        $network_configuration_argument \
+        $launch_type_argument | jq '.'
     fi
 }
 
@@ -144,14 +164,6 @@ if [[ -n "${network_mode}" ]]; then
     register_command+=" --network-mode ${network_mode}"
 fi
 
-if [[ -n "${task_cpu}" ]]; then
-    register_command+=" --cpu ${task_cpu}"
-fi
-
-if [[ -n "${task_memory}" ]]; then
-    register_command+=" --memory ${task_memory}"
-fi
-
 echo "--- :ecs: task register command: ${register_command}"
 
 json_output=$(eval "$register_command")
@@ -159,7 +171,7 @@ register_exit_code=$?
 
 if [[ $register_exit_code -ne 0 ]] ; then
   echo "+++ ^^^"
-  echo "+++ Failed to register task defintion"
+  echo "+++ Failed to register task definition"
   exit "$register_exit_code"
 fi
 
@@ -167,10 +179,22 @@ task_revision=$(jq '.taskDefinition.revision' <<< "$json_output")
 echo "Registered ${task_family}:${task_revision}"
 
 # Create service if it doesn't already exist
-create_service "$cluster" "${task_family}:${task_revision}" "$service_name" "$desired_count" "$target_group" "$target_container" "$target_port"
+create_service "$cluster" \
+  "${task_family}:${task_revision}" \
+  "$service_name" \
+  "$desired_count" \
+  "$target_group" \
+  "$target_container" \
+  "$target_port"
 
 # shellcheck disable=SC2016
-lb_config=$(aws ecs describe-services --cluster "$cluster" --services "$service_name" --query 'services[?status==`ACTIVE`]' | jq -r '.[0].loadBalancers[0]')
+lb_config=$(aws ecs \
+  describe-services \
+  --cluster "$cluster" \
+  --services "$service_name" \
+  --query 'services[?status==`ACTIVE`]' \
+   | jq -r '.[0].loadBalancers[0]')
+
 error="+++ ^^^
 +++ Cannot update a service to add/remove a load balancer. First delete the service and then run again, or rename the service to force a new one to be created"
 
@@ -203,7 +227,9 @@ echo "revision: ${task_family}:${task_revision}"
 aws ecs update-service \
   --cluster "${cluster}" \
   --service "${service_name}" \
-  --task-definition "${task_family}:${task_revision}" | jq '.'
+  --task-definition "${task_family}:${task_revision}" \
+  --desired-count "$desired_count" \
+  --deployment-configuration "maximumPercent=${max_deploy_perc},minimumHealthyPercent=${min_deploy_perc}" | jq '.'
 
 ############################################################
 # Script begins                                            #
