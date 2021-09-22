@@ -32,6 +32,14 @@ configuration:
       type: string
     deployment-config:
       type: string
+    require-capabilities:
+      type: string
+    network-mode:
+      type: string
+    fargate_cpu:
+      type: string
+    fargate_memory:
+      type: string
   required:
     - cluster
     - service
