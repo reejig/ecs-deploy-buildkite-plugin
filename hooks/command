@@ -232,7 +232,7 @@ aws ecs update-service \
   --service "${service_name}" \
   --task-definition "${task_family}:${task_revision}" \
   --desired-count "$desired_count" \
-  --deployment-configuration "maximumPercent=${max_deploy_perc},minimumHealthyPercent=${min_deploy_perc}" | jq '.'
+  --deployment-configuration "maximumPercent=${max_deploy_perc},minimumHealthyPercent=${min_deploy_perc}" | jq 'del(.service.events)'
 
 ## Now we wait till it's stable
 echo "--- :ecs: Waiting for services to stabilize"
