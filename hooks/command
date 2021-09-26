@@ -46,6 +46,19 @@ task_cpu=${BUILDKITE_PLUGIN_ECS_DEPLOY_TASK_CPU:-""}
 task_memory=${BUILDKITE_PLUGIN_ECS_DEPLOY_TASK_MEMORY:-""}
 network_configuration=${BUILDKITE_PLUGIN_ECS_DEPLOY_NETWORK_CONFIGURATION:-""}
 
+load_balancers_json_loc=${BUILDKITE_PLUGIN_ECS_DEPLOY_LOAD_BALANCERS_JSON:-""}
+
+if [[ -n $load_balancers_json_loc ]]; then
+  if [[ $(jq '. | length' "$load_balancers_json_loc") == "0" ]]; then
+    echo "^^^"
+    echo "Invalid load balancers configuration"
+    echo 'JSON configuration should have minimal length of 1'
+    exit 1
+  fi
+
+  load_balancers_json=$(cat "$load_balancers_json_loc" | jq '.')
+fi
+
 if [[ $region != "" ]]; then
   # shellcheck disable=SC2034 # Used by the aws cli
   AWS_DEFAULT_REGION=${region}
@@ -74,7 +87,12 @@ function create_service() {
     local service_name=$3
     local desired_count=$4
     local target_group_arguments
-    target_group_arguments=$(generate_target_group_arguments "$5" "$6" "$7")
+
+    if [[ -n $load_balancers_json ]]; then
+      target_group_arguments="${load_balancers_json}"
+    else
+      target_group_arguments=$(generate_target_group_arguments "$5" "$6" "$7")
+    fi
 
     # shellcheck disable=SC2016
     service_defined=$(aws ecs describe-services \

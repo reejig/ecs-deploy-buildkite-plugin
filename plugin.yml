@@ -22,12 +22,14 @@ configuration:
       type: string
     target-group:
       type: string
-    load-balanccer-name:
+    load-balancer-name:
       type: string
     target-container-name:
       type: string
     target-container-port:
       type: integer
+    load-balancers-json:
+      type: string
     execution-role:
       type: string
     deployment-config:
