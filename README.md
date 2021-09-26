@@ -99,6 +99,44 @@ Example: `"0/100"`
 
 The region we deploy the ECS Service to.
 
+### `requires-compatibilities` (optional)
+
+The task launch type that Amazon ECS should validate the task definition against. This ensures that the task definition parameters are compatible with the specified launch type. If no value is specified, it defaults to EC2 .
+Valid values include EC2 and FARGATE.
+
+Example: `"FARGATE"`
+
+### `task-cpu` (required if requires-compatibilities="FARGATE")
+
+The number of CPU units used by the task. It can be expressed as an integer using CPU units, for example `1024`, or as a string using vCPUs, for example `1 vCPU` or `1 vcpu`.
+
+Example: `1024`, `"1 vCPU"`, `"1 vcpu"` 
+
+### `task-memory` (required if requires-compatibilities="FARGATE")
+
+The amount of memory (in MiB) used by the task. It can be expressed as an integer using MiB, for example `1024`, or as a string using GB, for example `1GB` or `1 GB`.
+
+Example: `1024`, `"1GB"`, `"1 GB"` 
+
+`task-cpu` and `task-memory` must use one of the following values:
+* 512 (0.5 GB), 1024 (1 GB), 2048 (2 GB) - Available cpu values: 256 (.25 vCPU)
+* 1024 (1 GB), 2048 (2 GB), 3072 (3 GB), 4096 (4 GB) - Available cpu values: 512 (.5 vCPU)
+* 2048 (2 GB), 3072 (3 GB), 4096 (4 GB), 5120 (5 GB), 6144 (6 GB), 7168 (7 GB), 8192 (8 GB) - Available cpu values: 1024 (1 vCPU)
+* Between 4096 (4 GB) and 16384 (16 GB) in increments of 1024 (1 GB) - Available cpu values: 2048 (2 vCPU)
+* Between 8192 (8 GB) and 30720 (30 GB) in increments of 1024 (1 GB) - Available cpu values: 4096 (4 vCPU)
+
+### `network-mode` (optional)
+
+The Docker networking mode to use for the containers in the task. The valid values are `none`, `bridge`, `awsvpc`, and `host`. The default Docker network mode is `bridge`.
+
+Example: `"awsvpc"`
+
+### `network-configuration` (optional)
+
+The network configuration (The VPC subnets and security groups associated with a task) for the service. This parameter is required for task definitions that use the awsvpc network mode to receive their own elastic network interface, and it is not supported for other network modes.
+
+Example: `"awsvpcConfiguration={subnets=[string,string],securityGroups=[string,string],assignPublicIp=string}"`
+
 ## AWS Roles
 
 At a minimum this plugin requires the following AWS permissions to be granted to the agent running this step:

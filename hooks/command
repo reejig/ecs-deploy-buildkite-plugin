@@ -40,6 +40,11 @@ target_container=${BUILDKITE_PLUGIN_ECS_DEPLOY_TARGET_CONTAINER_NAME:-""}
 target_port=${BUILDKITE_PLUGIN_ECS_DEPLOY_TARGET_CONTAINER_PORT:-""}
 execution_role=${BUILDKITE_PLUGIN_ECS_DEPLOY_EXECUTION_ROLE:-""}
 region=${BUILDKITE_PLUGIN_ECS_DEPLOY_REGION:-""}
+requires_compatibilities=${BUILDKITE_PLUGIN_ECS_DEPLOY_REQUIRES_COMPATIBILITIES:-""}
+network_mode=${BUILDKITE_PLUGIN_ECS_DEPLOY_NETWORK_MODE:-""}
+task_cpu=${BUILDKITE_PLUGIN_ECS_DEPLOY_TASK_CPU:-""}
+task_memory=${BUILDKITE_PLUGIN_ECS_DEPLOY_TASK_MEMORY:-""}
+network_configuration=${BUILDKITE_PLUGIN_ECS_DEPLOY_NETWORK_CONFIGURATION:-""}
 
 if [[ $region != "" ]]; then
   # shellcheck disable=SC2034 # Used by the aws cli
@@ -73,6 +78,17 @@ function create_service() {
 
     # shellcheck disable=SC2016
     service_defined=$(aws ecs describe-services --cluster "$cluster_name" --service "$service_name" --query 'services[?status==`ACTIVE`].status' --output text |wc -l)
+    
+    [[ -n "${network_configuration}" ]] \
+      && network_configuration_argument=" --network-configuration ${network_configuration}" \
+      || network_configuration_argument="" 
+
+    # always use --launch-type argument instead of use --capacity-provider-strategy
+    # otherwise "FARGATE" capacity-provider will be used
+    [[ "${requires_compatibilities}" == "FARGATE" ]] \
+      && launch_type_argument=" --launch-type FARGATE" \
+      || launch_type_argument=" --launch-type EC2"
+
     if [[ $service_defined -eq 0 ]]; then
         echo "--- :ecs: Creating a Service $service_name in cluster $cluster_name"
         # shellcheck disable=SC2086
@@ -82,7 +98,9 @@ function create_service() {
         --task-definition "$task_definition" \
         --desired-count "$desired_count" \
         --deployment-configuration "maximumPercent=${max_deploy_perc},minimumHealthyPercent=${min_deploy_perc}" \
-        $target_group_arguments
+        $target_group_arguments \
+        $network_configuration_argument \
+        $launch_type_argument
     fi
 }
 
@@ -132,6 +150,30 @@ if [[ -n "${execution_role}" ]]; then
     register_command+=" --execution-role-arn ${execution_role}"
 fi
 
+if [[ -n "${requires_compatibilities}" ]]; then
+  register_command+=" --requires-compatibilities ${requires_compatibilities}"
+  if [[ "${requires_compatibilities}" == "FARGATE" ]]; then
+    # FARGATE configuration requires to have task_cpu and task_memory setup
+    # also network_mode == "awsvpc" and need to have network configuration for new service
+    if [[ -n "${task_cpu}" && -n "${task_memory}" \
+      && "${network_mode}" == "awsvpc" && -n "${network_configuration}" ]]; then
+      register_command+=" --cpu ${task_cpu}"
+      register_command+=" --memory ${task_memory}"
+    else
+      echo "+++ ^^^"
+      echo "+++ FARGATE launch type requires following configuration to be set: "
+      echo "+++ task_cpu, task_memory, network_mode=\"awsvpc\", network_configuration"
+      exit 1
+    fi
+  fi
+fi
+
+if [[ -n "${network_mode}" ]]; then
+    register_command+=" --network-mode ${network_mode}"
+fi
+
+echo "--- :ecs: task register command: ${register_command}"
+
 json_output=$(eval "$register_command")
 register_exit_code=$?
 
@@ -175,10 +217,14 @@ elif [[ -n "$load_balancer_name" ]] && [[ $(echo "$lb_config" |jq -r '.loadBalan
 fi
 
 echo "--- :ecs: Updating service for ${service_name}"
+echo "for cluster: ${cluster}"
+echo "revision: ${task_family}:${task_revision}"
 aws ecs update-service \
   --cluster "${cluster}" \
   --service "${service_name}" \
-  --task-definition "${task_family}:${task_revision}"
+  --task-definition "${task_family}:${task_revision}" \
+  --desired-count "$desired_count" \
+  --deployment-configuration "maximumPercent=${max_deploy_perc},minimumHealthyPercent=${min_deploy_perc}"
 
 ## Now we wait till it's stable
 echo "--- :ecs: Waiting for services to stabilize"
@@ -186,7 +232,6 @@ deploy_exitcode=0
 aws ecs wait services-stable \
   --cluster "${cluster}" \
   --services "${service_name}" || deploy_exitcode=$?
-
 
 service_events=$(aws ecs describe-services \
   --cluster "${cluster}" \
