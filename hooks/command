@@ -56,7 +56,7 @@ if [[ -n $load_balancers_json_loc ]]; then
     exit 1
   fi
 
-  load_balancers_json=$(cat "$load_balancers_json_loc" | jq '.')
+  load_balancers_json=$(cat "$load_balancers_json_loc" | jq --compact-output '.')
 fi
 
 if [[ $region != "" ]]; then
