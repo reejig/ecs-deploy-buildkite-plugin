@@ -148,7 +148,7 @@ for image in "${images[@]}"; do
 done
 
 # TODO: DEBUGGING ADDING TAGS
-echo "${tags[@]}"
+echo "+++ ${tags[@]}"
 
 echo "--- :ecs: Registering new task definition for ${task_family}"
 register_command="aws ecs register-task-definition \
