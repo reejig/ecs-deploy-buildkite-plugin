@@ -132,21 +132,18 @@ The Docker networking mode to use for the containers in the task. The valid valu
 
 Example: `"awsvpc"`
 
-<<<<<<< HEAD
 ### `network-configuration` (optional)
 
 The network configuration (The VPC subnets and security groups associated with a task) for the service. This parameter is required for task definitions that use the awsvpc network mode to receive their own elastic network interface, and it is not supported for other network modes.
 
 Example: `"awsvpcConfiguration={subnets=[string,string],securityGroups=[string,string],assignPublicIp=string}"`
-=======
-### `fargate-memory` (optional)
 
-If using `requires-compatibilities=FARGATE`, set the memory to be used.
+### `tags` (optional)
 
-### `fargate-cpu` (optional)
+Tags to add to the Task Definition.
 
-If using `requires-compatibilities=FARGATE`, set the CPU to be used.
->>>>>>> support-fargate
+Example: `"Name=demo"`
+
 
 ## AWS Roles
 

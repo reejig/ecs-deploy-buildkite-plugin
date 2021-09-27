@@ -195,7 +195,7 @@ if [[ "${#tags[@]}" -gt 0 ]]; then
     IFS='=' read -ra tag_arr <<< "$tag"
     aws_tags+="key=${tag_arr[0]},value=${tag_arr[1]} "
   done
-  echo "+++ ${aws_tags}"
+  echo "--- Adding tags: --tags ${aws_tags}"
 
   register_command+=" --tags ${aws_tags}"
 fi
