@@ -106,6 +106,7 @@ function create_service() {
         --service-name "$service_name" \
         --task-definition "$task_definition" \
         --desired-count "$desired_count" \
+        --region "${region}" \
         --deployment-configuration "maximumPercent=${max_deploy_perc},minimumHealthyPercent=${min_deploy_perc}" \
         $target_group_arguments \
         $network_configuration_argument \
