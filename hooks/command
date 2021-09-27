@@ -31,6 +31,10 @@ images=()
 while read -r line ; do
   [[ -n "$line" ]] && images+=("$line")
 done <<< "$(plugin_read_list IMAGE)"
+tags=()
+while read -r line ; do
+  [[ -n "$line" ]] && tags+=("$line")
+done <<< "$(plugin_read_list TAGS)"
 task_definition=${BUILDKITE_PLUGIN_ECS_DEPLOY_TASK_DEFINITION?}
 desired_count=${BUILDKITE_PLUGIN_ECS_DEPLOY_DESIRED_COUNT:-"1"}
 task_role_arn=${BUILDKITE_PLUGIN_ECS_DEPLOY_TASK_ROLE_ARN:-""}
@@ -48,7 +52,6 @@ network_configuration=${BUILDKITE_PLUGIN_ECS_DEPLOY_NETWORK_CONFIGURATION:-""}
 
 if [[ $region != "" ]]; then
   # shellcheck disable=SC2034 # Used by the aws cli
-  export AWS_DEFAULT_REGION=${region}
   AWS_DEFAULT_REGION=${region}
 fi
 
@@ -81,6 +84,7 @@ function create_service() {
     service_defined=$(aws ecs describe-services \
       --cluster "$cluster_name" \
       --service "$service_name" \
+      --region "$region" \
       --query 'services[?status==`ACTIVE`].status' \
       --output text | wc -l)
     
@@ -141,6 +145,9 @@ for image in "${images[@]}"; do
   )
   image_idx=$((image_idx+1))
 done
+
+# TODO: DEBUGGING ADDING TAGS
+echo "${tags[@]}"
 
 echo "--- :ecs: Registering new task definition for ${task_family}"
 register_command="aws ecs register-task-definition \
@@ -262,7 +269,7 @@ function die() {
 }
 
 function describeService() {
-    SERVICE=$(aws ecs describe-services --cluster "$cluster" --services "$service_name")
+    SERVICE=$(aws ecs describe-services --cluster "$cluster" --services "$service_name" --region "$region")
     serviceIsValid <<<"$SERVICE" || return 1
     cat <<<"$SERVICE"
 }

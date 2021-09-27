@@ -42,6 +42,8 @@ configuration:
       type: integer
     network-mode:
       type: string
+    tags:
+      type: [ string, array ]
   required:
     - cluster
     - service
