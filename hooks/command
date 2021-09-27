@@ -191,9 +191,15 @@ if [[ -n "${network_mode}" ]]; then
     register_command+=" --network-mode ${network_mode}"
 fi
 
-if [[ -n "${tags}" ]]; then
-  echo "+++ ${tags[@]}"
-  register_command+=" --tags $(join_by , "${tags[@]}")"
+if [[ "${#tags[@]}" -gt 0 ]]; then
+  aws_tags=""
+  for tag in "${tags[@]}"; do
+    IFS='=' read -ra tag_arr <<< "$tag"
+    aws_tags+="key=${tag_arr[0]},value=${tag_arr[1]} "
+  done
+  echo "+++ ${aws_tags}"
+
+  register_command+=" --tags ${aws_tags}"
 fi
 
 echo "--- :ecs: task register command: ${register_command} | jq '.'"
