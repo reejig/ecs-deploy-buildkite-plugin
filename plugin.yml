@@ -42,7 +42,6 @@ configuration:
       type: integer
     network-mode:
       type: string
-    
   required:
     - cluster
     - service
