@@ -49,6 +49,7 @@ network_configuration=${BUILDKITE_PLUGIN_ECS_DEPLOY_NETWORK_CONFIGURATION:-""}
 if [[ $region != "" ]]; then
   # shellcheck disable=SC2034 # Used by the aws cli
   export AWS_DEFAULT_REGION=${region}
+  AWS_DEFAULT_REGION=${region}
 fi
 
 # Resolve any runtime environment variables it has
@@ -152,6 +153,10 @@ fi
 
 if [[ -n "${execution_role}" ]]; then
     register_command+=" --execution-role-arn ${execution_role}"
+fi
+
+if [[ -n "${region}" ]]; then
+    register_command+=" --region ${region}"
 fi
 
 if [[ -n "${requires_compatibilities}" ]]; then
