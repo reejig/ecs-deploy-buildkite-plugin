@@ -88,6 +88,8 @@ function create_service() {
     local desired_count=$4
     local target_group_arguments
 
+
+    echo "${load_balancers_json}"
     if [[ -n "${load_balancers_json:-""}" ]]; then
       target_group_arguments=$(echo "--load-balancers ${load_balancers_json}")
     else
