@@ -3,7 +3,8 @@
 A [Buildkite plugin](https://buildkite.com/docs/agent/v3/plugins) for deploying to [Amazon ECS](https://aws.amazon.com/ecs/).
 
 * Requires the aws cli tool be installed
-* Registers a new task definition based on a given JSON file ([`register-task-definition`](http://docs.aws.amazon.com/cli/latest/reference/ecs/register-task-definition.html]))
+* Registers a new task definition based on a given JSON file ([`register-task-definition`](http://docs.aws.amazon.com/cli/latest/reference/ecs/register-task-definition.html))
+* Create the ECS service if not exist ([`create-service`](https://docs.aws.amazon.com/cli/latest/reference/ecs/create-service.html))
 * Updates the ECS service to use the new task definition ([`update-service`](http://docs.aws.amazon.com/cli/latest/reference/ecs/update-service.html))
 * Waits for the service to stabilize ([`wait services-stable`](http://docs.aws.amazon.com/cli/latest/reference/ecs/wait/services-stable.html))
 
@@ -66,6 +67,25 @@ image:
 
 An IAM ECS Task Role to assign to tasks.
 Requires the `iam:PassRole` permission for the ARN specified.
+
+### `load-balancers-json` (optional)
+
+This is the load balancer config json which to be used to setup multiple
+load-balancer(CLB)/target-group(ALB, NLB) for the services.
+
+Notice this will overrite the following target-group config.
+
+```sh
+[
+  {
+    "targetGroupArn": "string", # for ALB and NLB
+    "loadBalancerName": "string", # for CLB
+    "containerName": "string",
+    "containerPort": integer
+  }
+  ...
+]
+```
 
 ### `target-group` (optional)
 
@@ -161,7 +181,7 @@ This plugin will create the ECS Service if it does not already exist, which addi
 To run the tests:
 
 ```bash
-docker-compose run tests
+docker-compose run --rm tests
 ```
 
 ## License
